@@ -1,0 +1,324 @@
+{
+  "info": {
+    "name": "FIN Bank Nova — Digital Banking System",
+    "description": "Complete API collection for FIN Bank Nova, integrated with NIBSS by Phoenix",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "accountNumber", "value": "", "type": "string" },
+    { "key": "transactionId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Admin & Setup",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/health"
+          }
+        },
+        {
+          "name": "NIBSS Onboard (Run Once)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/admin/nibss/onboard",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"FIN Bank Nova Nigeria\",\n  \"email\": \"admin@finbanknova.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Onboarding successful', function() {",
+                "  pm.response.to.have.status(201);",
+                "});",
+                "var jsonData = pm.response.json();",
+                "if (jsonData.instructions) {",
+                "  console.log('NIBSS_API_KEY:', jsonData.instructions.NIBSS_API_KEY);",
+                "  console.log('NIBSS_API_SECRET:', jsonData.instructions.NIBSS_API_SECRET);",
+                "  console.log('NIBSS_BANK_CODE:', jsonData.instructions.NIBSS_BANK_CODE);",
+                "  console.log('NIBSS_BANK_NAME:', jsonData.instructions.NIBSS_BANK_NAME);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Test NIBSS Token",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/nibss/token-test"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Customer Registration & Auth",
+      "item": [
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\",\n  \"phone\": \"08012345678\",\n  \"dob\": \"1995-06-15\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Customer registered', function() {",
+                "  pm.response.to.have.status(201);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Login Customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login successful', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var jsonData = pm.response.json();",
+                "if (jsonData.token) {",
+                "  pm.collectionVariables.set('token', jsonData.token);",
+                "  console.log('Token saved to collection variable');",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. KYC — Identity Registration",
+      "item": [
+        {
+          "name": "Register BVN",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/kyc/bvn/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bvn\": \"12345678901\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dob\": \"1995-06-15\",\n  \"phone\": \"08012345678\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('BVN registered', function() {",
+                "  pm.expect(pm.response.code).to.be.oneOf([201, 200]);",
+                "});"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Validate BVN",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/kyc/bvn/validate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bvn\": \"12345678901\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register NIN (Alternative to BVN)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/kyc/nin/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nin\": \"12345678902\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dob\": \"1995-06-15\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Validate NIN",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/kyc/nin/validate",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nin\": \"12345678902\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Account Operations",
+      "item": [
+        {
+          "name": "Create Bank Account",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/account/create",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Account created', function() {",
+                "  pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                "});",
+                "var jsonData = pm.response.json();",
+                "if (jsonData.account && jsonData.account.accountNumber) {",
+                "  pm.collectionVariables.set('accountNumber', jsonData.account.accountNumber);",
+                "  console.log('Account number saved:', jsonData.account.accountNumber);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Get My Account",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/account/my-account",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Get Account Balance",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/account/balance",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Name Enquiry",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/account/name-enquiry/{{accountNumber}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Get All Accounts (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/account/all",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Transactions",
+      "item": [
+        {
+          "name": "Transfer Funds",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/transaction/transfer",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toAccount\": \"RECIPIENT_ACCOUNT_NUMBER_HERE\",\n  \"amount\": 1000,\n  \"description\": \"Test transfer\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Transfer processed', function() {",
+                "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                "});",
+                "var jsonData = pm.response.json();",
+                "if (jsonData.transaction && jsonData.transaction.transactionId) {",
+                "  pm.collectionVariables.set('transactionId', jsonData.transaction.transactionId);",
+                "  console.log('Transaction ID saved:', jsonData.transaction.transactionId);",
+                "}"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Transaction History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/transaction/history?page=1&limit=10",
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Transaction Status (TSQ)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transaction/status/{{transactionId}}",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    }
+  ]
+}
